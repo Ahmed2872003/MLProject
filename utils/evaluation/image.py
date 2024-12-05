@@ -1,8 +1,10 @@
 from sklearn.metrics import accuracy_score, confusion_matrix,precision_score, recall_score, roc_curve, roc_auc_score
 from sklearn.preprocessing import label_binarize
-from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import log_loss
 
 
 def evaluate(model, Y_test, Y_pred, X_test):
@@ -43,12 +45,54 @@ def show_roc_graph(title, Y_test_bin, Y_score):
     plt.show()
 
 
-def show_logestic_Reg_loss_curve(X_train, Y_train):
-    logreg_cv = LogisticRegressionCV(max_iter=1000, random_state=42, solver='liblinear')
-    logreg_cv.fit(X_train, Y_train)
 
-    plt.plot(logreg_cv.scores_[1].mean(axis=0))
+def show_loss_curve(X_train, Y_train, model = "Logistic"):
+    if model == "Logistic":
+        show_logistic_Reg_loss_curve(X_train, Y_train)
+    elif model == "KNN":
+        show_KNN_loss_curve(X_train, Y_train)
+
+
+def show_logistic_Reg_loss_curve(X_train, Y_train):
+    losses = []
+    max_iter = 100
+
+    logreg = LogisticRegression(solver='lbfgs', warm_start=True, max_iter=500, random_state=42)
+
+    for i in range(max_iter):
+        logreg.fit(X_train, Y_train)
+        y_prob = logreg.predict_proba(X_train)
+        loss = log_loss(Y_train, y_prob)
+        losses.append(loss)
+
+    plt.plot(range(1, max_iter + 1), losses)
     plt.xlabel('Iterations')
     plt.ylabel('Log Loss')
     plt.title('Logistic Regression Loss Curve')
+    plt.show()
+
+
+def show_KNN_loss_curve(X_train, Y_train, max_k=20):
+    train_errors = []
+        
+    for k in range(1, max_k + 1):
+        # Train KNN with k neighbors
+        knn = KNeighborsClassifier(n_neighbors=k)
+        knn.fit(X_train, Y_train)
+        
+        # Predict on the training set
+        Y_train_pred = knn.predict(X_train)
+        
+        # Calculate training error rate
+        train_error = 1 - accuracy_score(Y_train, Y_train_pred)
+        train_errors.append(train_error)
+    
+    # Plot the training error curve
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(1, max_k + 1), train_errors, label='Training Error', marker='o')
+    plt.xlabel('Number of Neighbors (k)')
+    plt.ylabel('Error Rate')
+    plt.title('KNN Training Loss Curve')
+    plt.legend()
+    plt.grid()
     plt.show()
